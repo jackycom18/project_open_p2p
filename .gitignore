@@ -1,0 +1,42 @@
+# ============ 归档 / 压缩包 ============
+# 源码已解压为 open-p2p-main/，压缩包不重复入库
+open-p2p.tar.gz
+*.tar.gz
+
+# ============ Python 生成物 ============
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ============ IDE / 本地工具 ============
+.codebuddy/
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ============ 数据 / 权重（体积大，不入库） ============
+dataset/
+datasets/
+checkpoints/
+checkpoint*/
+data_folder/
+data_folder_validation/
+yt_videos/
+wandb/
+
+# ============ 运行输出 ============
+logs/
+*.log
+eval_results/
+demo/
