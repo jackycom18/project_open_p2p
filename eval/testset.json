@@ -1,0 +1,22 @@
+{
+  "dataset": "/home/yue/open-p2p/dataset",
+  "generated_at": "2026-08-20",
+  "seed": 42,
+  "note": "文本指令扩展：2 个指令片段，各 200 帧。instruction/task 已人工填写（WASD 键位）。",
+  "testset": [
+    {
+      "episode": "/home/yue/open-p2p/dataset/dataset/0199d579-91ea-78f2-acd4-7cda376a3cea",
+      "start_frame": 0,
+      "num_frames": 200,
+      "instruction": "持续向左移动",
+      "task": "move_left"
+    },
+    {
+      "episode": "/home/yue/open-p2p/dataset/dataset/01993bb8-12e7-78a1-b661-0c0c3a258e21",
+      "start_frame": 0,
+      "num_frames": 200,
+      "instruction": "跳跃后向右转",
+      "task": "jump_then_turn_right"
+    }
+  ]
+}

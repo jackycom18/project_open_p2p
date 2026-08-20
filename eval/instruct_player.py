@@ -149,8 +149,8 @@ def main() -> None:
     frame_bytes = evaluate.load_video_frames(
         episode_dir, vname, args.start_frame, len(annotations)
     )
-    width = proto.metadata.frame_width if proto.metadata.HasField("frame_width") else 192
-    height = proto.metadata.frame_height if proto.metadata.HasField("frame_height") else 192
+    # 官方 150M 模型固定 192x192 输入
+    width, height = 192, 192
     frames = [make_frame(fb, width, height, i) for i, fb in enumerate(frame_bytes)]
 
     # 2. 读指令时间轴

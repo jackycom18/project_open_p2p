@@ -178,23 +178,20 @@ def check_instruction(
       jump_then_turn_right  ：片段内按顺序检测到"跳跃(Space) → 右移(RightArrow)"动作
     """
     if task == "move_left":
-        left_moves = [p for p in predictions if (p["mouse_delta_x"] or 0) < 0]
-        total_left = sum(-(p["mouse_delta_x"] or 0) for p in left_moves)
-        used_left_key = any("LeftArrow" in p["keys"] for p in predictions)
-        ok = total_left >= 50 and used_left_key
-        reason = (
-            f"累计左移位移={total_left:.1f}px(阈值50)，"
-            f"使用左移键={used_left_key}"
-        )
+        # 红键迷宫 WASD：左移键 "a"。基于按键帧数判定（避开鼠标 bin 中心数值放大问题）
+        left_frames = sum(1 for p in predictions if "a" in p["keys"])
+        ok = left_frames >= 10
+        reason = f"按左移键(a)帧数={left_frames}（阈值10帧，片段{n_frames}帧）"
         return ok, reason
 
     if task == "jump_then_turn_right":
         jump_at = next(
             (i for i, p in enumerate(predictions) if "Space" in p["keys"]), None
         )
+        # 红键迷宫 WASD：右移键 "d"，且要求跳跃后再右转（d 在 Space 之后出现）
         turn_after = (
             next(
-                (i for i, p in enumerate(predictions) if i > (jump_at or -1) and "RightArrow" in p["keys"]),
+                (i for i, p in enumerate(predictions) if i > (jump_at or -1) and "d" in p["keys"]),
                 None,
             )
             if jump_at is not None
@@ -202,7 +199,7 @@ def check_instruction(
         )
         ok = jump_at is not None and turn_after is not None
         reason = (
-            f"跳跃帧={jump_at}，跳跃后右转帧={turn_after}（片段 {n_frames} 帧）"
+            f"跳跃帧={jump_at}，跳跃后右转(d)帧={turn_after}（片段 {n_frames} 帧）"
         )
         return ok, reason
 
@@ -263,8 +260,8 @@ def main():
 
     # 2. 视频帧（与标注对齐）
     frame_bytes = load_video_frames(episode_dir, args.video_name, args.start_frame, len(annotations))
-    width = proto.metadata.frame_width if proto.metadata.HasField("frame_width") else 192
-    height = proto.metadata.frame_height if proto.metadata.HasField("frame_height") else 192
+    # 官方 150M 模型固定 192x192 输入（与 config frame_width/frame_height 一致）
+    width, height = 192, 192
 
     # 3. 推理
     logger.info("连接推理服务器 %s，发送 %d 帧...", args.uds_path, len(frame_bytes))

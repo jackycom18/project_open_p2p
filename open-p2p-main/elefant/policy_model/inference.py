@@ -500,6 +500,7 @@ class InferenceServer(UnixDomainSocketInferenceServer):
         metrics_window_seconds: float = 60.0,
         checkpoint_path: str = None,
         input_text: bool = False,
+        fps_test_frames: int = 10_000,
     ):
         super().__init__(uds_path=UDS_PATH)
         self.shared_text_state = SharedTextInputState(input_text=input_text)
@@ -584,7 +585,7 @@ class InferenceServer(UnixDomainSocketInferenceServer):
         # The warmup should have done all the compilation, so we should fail if we try to compile again.
         with log_time("FPS test"):
             with torch.compiler.set_stance(self._compile_stance):
-                self.fps_test(10_000)
+                self.fps_test(fps_test_frames)
 
         self.active_connections = set()
 
@@ -1033,6 +1034,7 @@ def serve_model(
     metrics_window_seconds: float = 60.0,
     checkpoint_path: str = None,
     input_text: bool = False,
+    fps_test_frames: int = 10_000,
 ):
     logging.basicConfig(level=logging.INFO, force=True)
 
@@ -1048,6 +1050,7 @@ def serve_model(
         metrics_window_seconds=metrics_window_seconds,
         checkpoint_path=checkpoint_path,
         input_text=input_text,
+        fps_test_frames=fps_test_frames,
     )
 
     # Setup signal handlers for non-asyncio contexts
@@ -1113,6 +1116,12 @@ def _main():
         help="Time window in seconds for aggregating and reporting metrics.",
     )
     parser.add_argument(
+        "--fps_test_frames",
+        type=int,
+        default=10_000,
+        help="FPS 测试（warmup）帧数，默认 10000；全量重算模式建议调小以免 warmup 过久。",
+    )
+    parser.add_argument(
         "--input_text",
         action="store_true",
         default=False,
@@ -1149,6 +1158,7 @@ def _main():
             metrics_window_seconds=args.metrics_window_seconds,
             checkpoint_path=args.checkpoint_path,
             input_text=args.input_text,
+            fps_test_frames=args.fps_test_frames,
         )
 
 

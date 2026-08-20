@@ -92,6 +92,7 @@ uv run elefant/policy_model/inference.py \
 | M4 | 第 5 天对比录屏 | `record_demo.py` |
 | M5 | 归档 + 指标表 + ≥3000 字报告 | `git` + `summarize.py` + 报告文档 |
 | 扩展 | 2 个指令片段，带指令完成率 ≥60% vs 不带指令 ≤35% | `run_instruct_experiment.py` |
+| 扩展 C | 推理性能：KV Cache vs 全量重算，报告耗时/帧率/一致性 | `benchmark_inference.py` |
 
 ---
 
@@ -355,6 +356,46 @@ uv run python eval/run_instruct_experiment.py \
 
 ---
 
+## 5.5 扩展 C：推理性能评测（可选扩展）
+
+### 5.5.1 原理
+
+官方 `inference.py` 原生支持两种推理模式，用 `benchmark_inference.py` 对比三组配置：
+
+| 配置 | 命令开关 | 含义 |
+|---|---|---|
+| kvcache（优化后） | 默认 | KV Cache 增量缓存，逐帧复用历史，最快 |
+| full（优化前） | `--use_full_inference` | 全量重算，每次重算整段历史，慢 |
+| no_compile（对照组） | `--no-compile` | 关闭 torch.compile，仍用 KV Cache |
+
+### 5.5.2 运行命令
+
+```bash
+cd ~/open-p2p
+uv run python eval/benchmark_inference.py \
+  --dataset dataset \
+  --episode <游戏>/<片段> \
+  --num-frames 200 \
+  --config checkpoints/150M/model_config.yaml \
+  --checkpoint-path checkpoints/150M/checkpoint-step=00500000.ckpt
+```
+
+### 5.5.3 输出与验收
+
+- 输出到 `eval_results/benchmark_<时间戳>/`：`benchmark.csv`（明细）+ `report.md`（对比表 + 结论）；
+- 脚本自动报告：**KV Cache 加速比**（full 耗时 / kvcache 耗时）与**按键一致率变化**（kvcache − full）。
+
+**验收口径（扩展 C）**：
+
+| 指标 | 目标 |
+|---|---|
+| KV Cache 加速比 | >1x（有可量化加速） |
+| 按键一致率变化 | 无显著变化（|Δ| < 2%） |
+
+> ⚠️ 注意：`--use_full_inference` 与 `--use_manual_sampling` 互斥，本实验不涉及后者。若想对比鼠标采样策略（`mean`/`conservative`/`truncated_normal`），需改 `model_config.yaml` 里的 `inference.mouse_sampling_approach` 字段，不在本脚本命令行范围内。
+
+---
+
 ## 6. Day 5：M5 归档 + 指标表 + 报告
 
 ### 6.1 归档代码与结果到 Git
@@ -404,6 +445,12 @@ uv run python eval/record_demo.py --dataset dataset --episode <游戏>/<片段> 
 # 文本指令对照实验
 uv run python eval/run_instruct_experiment.py \
   --dataset dataset --testset eval/testset.json \
+  --config checkpoints/150M/model_config.yaml \
+  --checkpoint-path checkpoints/150M/checkpoint-step=00500000.ckpt
+
+# 推理性能评测（扩展 C）
+uv run python eval/benchmark_inference.py \
+  --dataset dataset --episode <游戏>/<片段> --num-frames 200 \
   --config checkpoints/150M/model_config.yaml \
   --checkpoint-path checkpoints/150M/checkpoint-step=00500000.ckpt
 ```

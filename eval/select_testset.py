@@ -46,11 +46,11 @@ def find_episodes(dataset: Path) -> list[Path]:
 
 
 def _stats_episode(episode: Path) -> dict:
-    annotation = load_annotation(episode / "annotation.proto")
+    annotation = load_annotation(episode)
     frames = list(annotation.frame_annotations)
 
     n = len(frames)
-    is_known = sum(1 for f in frames if f.is_known)
+    is_known = sum(1 for f in frames if f.user_action.is_known)
     keys_counter: Counter[str] = Counter()
     move_count = 0
     move_abs = 0.0
@@ -88,7 +88,7 @@ def _stats_episode(episode: Path) -> dict:
 
 def action_stats(episode: Path, start: int, num: int) -> dict:
     """统计一段 [start, start+num) 帧内的动作特征，辅助挑选指令任务片段。"""
-    annotation = load_annotation(episode / "annotation.proto")
+    annotation = load_annotation(episode)
     frames = list(annotation.frame_annotations)[start : start + num]
     keys: Counter[str] = Counter()
     move = 0

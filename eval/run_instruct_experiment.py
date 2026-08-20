@@ -152,8 +152,8 @@ def run_unit(unit: dict, dataset: Path, video_name: str | None,
 
     vname = resolve_video_name(episode_dir, video_name)
     frame_bytes = evaluate.load_video_frames(episode_dir, vname, start, len(annotations))
-    width = proto.metadata.frame_width if proto.metadata.HasField("frame_width") else 192
-    height = proto.metadata.frame_height if proto.metadata.HasField("frame_height") else 192
+    # 官方 150M 模型固定 192x192 输入
+    width, height = 192, 192
 
     frames = [make_frame(fb, width, height, i) for i, fb in enumerate(frame_bytes)]
     predictions = client.run(frames)

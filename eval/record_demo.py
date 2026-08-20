@@ -46,7 +46,12 @@ VIDEO_NAMES = ("192x192.mp4", "video.mp4", "data.mp4")
 UP_H, DOWN_H = 384, 168
 CANVAS_W = 768
 BAR_W = (CANVAS_W - 40) // 2  # 左右动作栏宽度
+# 中文字体优先（文鼎明体支持中文 + 英文）
 FONT_PATHS = [
+    "/usr/share/fonts/truetype/arphic/uming.ttc",
+    "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
+    "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+    "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
     "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
     "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
 ]
@@ -150,8 +155,7 @@ def main() -> None:
         predictions = load_predictions_csv(Path(args.predictions_csv))
         logger_hint = f"从 {args.predictions_csv} 读取预测"
     else:
-        width = proto.metadata.frame_width if proto.metadata.HasField("frame_width") else 192
-        height = proto.metadata.frame_height if proto.metadata.HasField("frame_height") else 192
+        width, height = 192, 192  # 官方 150M 模型固定 192x192 输入
         client = InferenceClient(args.uds_path)
         frames = [make_frame(fb, width, height, i) for i, fb in enumerate(frame_bytes)]
         predictions = client.run(frames)
