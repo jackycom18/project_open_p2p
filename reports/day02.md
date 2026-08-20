@@ -2,7 +2,7 @@
 
 | 项目 | 内容 |
 |---|---|
-| 课题名称 | 行为克隆游戏智能体（文本指令方向） |
+| 课题名称 | 行为克隆游戏智能体（文本指令 + 推理性能方向） |
 | 组名/成员 | 向子坚（独立完成） |
 | 日期 | 2026-08-20 |
 | 当日任务 | 方案组成与技术选型 |
@@ -31,6 +31,7 @@ project/
 │   ├── select_testset.py      # 从数据集中固定挑选 ≤200 帧测试集
 │   ├── evaluate.py            # 单片段评测：按键准确率 / 鼠标相关 / 任务完成率
 │   ├── run_instruct_experiment.py # 带指令 vs 不带指令对照实验
+│   ├── benchmark_inference.py # 推理性能评测：KV Cache / 全量重算 / 关编译三组对比
 │   ├── summarize.py           # 汇总指标表，对照验收线
 │   └── record_demo.py         # 生成"人类标注 vs 模型输出"对比录屏
 ├── setup_wsl.sh / setup_wsl.ps1  # 环境一键部署脚本
@@ -55,7 +56,8 @@ project/
 | 评测框架 | 自研 Python 脚本（eval/） | 评测逻辑简单（逐帧对比），无需引入 pytest 等重量级框架；指标公式按立项书第六节实现 |
 | 指标存储 | CSV + Markdown 表格 | 便于 summarize 汇总和写入实验报告；不选数据库，数据量小 |
 | 演示 | `record_demo.py` 生成上下屏对比 mp4 | 满足 M4"同一片段上模型输出 vs 人类标注可视化对比"；不依赖实时游戏环境 |
-| 部署目标 | Linux（本地服务器 100.92.15.14）/ WSL2 | 课程实验室为联网 PC；推理需 NVIDIA GPU，Linux 驱动环境比 Windows 原生更稳 |
+| 推理性能评测 | `benchmark_inference.py` 对比 KV Cache / 全量重算 / 关编译三组 | 对应扩展 C；复用官方 `--use_full_inference` / `--no-compile` 开关，量化优化收益与按键一致率影响 |
+| 部署目标 | Linux 服务器（NVIDIA RTX 5880 Ada 48GB）/ WSL2 | 推理需 NVIDIA GPU，Linux 驱动环境比 Windows 原生更稳 |
 
 ## 4. 架构图
 
@@ -81,6 +83,6 @@ project/
 - [x] 系统组成清单完整（模型/评测/部署三块）；
 - [x] 每项选型均有理由；
 - [ ] 明日：主路径的数据与调用约定、假实现边界；
-- [ ] 待办：确认 GPU 驱动与显存（8GB 以上）满足 150M 推理。
+- [x] 已确认：GPU 为 NVIDIA RTX 5880 Ada（48GB），远满足 150M 推理需求。
 
 > 备注：如教师调整栏目，按当次布置为准。

@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Open P2P 行为克隆游戏智能体 · 演示系统</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --panel: #161b22;
+    --border: #30363d;
+    --accent: #2f81f7;
+    --accent2: #d29922;
+    --text: #c9d1d9;
+    --muted: #8b949e;
+    --green: #3fb950;
+    --red: #f85149;
+    --yellow: #d29922;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  header {
+    display: flex; align-items: center; gap: 16px;
+    padding: 12px 20px; background: var(--panel);
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 { font-size: 18px; font-weight: 600; }
+  header .sub { color: var(--muted); font-size: 12px; }
+  .status-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--red); display: inline-block; margin-left: auto;
+  }
+  .status-dot.on { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .status-text { font-size: 13px; color: var(--muted); }
+  .layout { display: flex; flex: 1; min-height: 0; }
+  aside {
+    width: 320px; min-width: 320px;
+    background: var(--panel); border-right: 1px solid var(--border);
+    padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px;
+  }
+  .card {
+    background: #0d1117; border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px;
+  }
+  .card h2 { font-size: 13px; color: var(--accent); margin-bottom: 10px; }
+  .row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+  label { font-size: 12px; color: var(--muted); min-width: 60px; }
+  select, input[type=text], input[type=number] {
+    flex: 1; background: var(--panel); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; font-size: 13px;
+  }
+  button {
+    background: var(--accent); color: #fff; border: none;
+    border-radius: 6px; padding: 8px 12px; font-size: 13px; cursor: pointer;
+  }
+  button:hover { opacity: 0.9; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.secondary { background: var(--panel); border: 1px solid var(--border); color: var(--text); }
+  button.danger { background: var(--red); }
+  button.warn { background: var(--accent2); color: #111; }
+  main {
+    flex: 1; display: flex; flex-direction: column; padding: 16px; gap: 12px; min-width: 0;
+  }
+  .screen { text-align: center; }
+  .frame-area {
+    position: relative; display: flex; align-items: center; justify-content: center;
+    width: 100%; height: 46vh; border: 2px solid var(--border); border-radius: 8px;
+    background: #000; overflow: hidden;
+  }
+  #frame-img {
+    max-width: 100%; max-height: 100%; display: none;
+  }
+  #frame-placeholder {
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    color: var(--muted); font-size: 14px;
+  }
+  #frame-placeholder .ph-icon {
+    width: 52px; height: 52px; border-radius: 50%;
+    background: var(--panel); border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+  }
+  #frame-placeholder .ph-icon svg { width: 22px; height: 22px; fill: var(--muted); }
+  #status-bar {
+    margin-top: 10px; font-size: 15px; font-weight: 600; min-height: 22px;
+  }
+  #status-bar.idle { color: var(--red); }
+  #status-bar.running { color: var(--green); }
+  #status-bar.paused { color: var(--yellow); }
+  #status-bar.done { color: var(--green); }
+  .progress { font-size: 12px; color: var(--muted); text-align: center; min-height: 16px; }
+  .actions-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  }
+  .action-card {
+    background: #0d1117; border: 1px solid var(--border); border-radius: 8px; padding: 12px;
+  }
+  .action-card h3 { font-size: 12px; margin-bottom: 8px; }
+  .action-card .gt h3 { color: #3b82f6; }
+  .action-card .pred h3 { color: var(--accent2); }
+  .kbd {
+    display: inline-block; background: var(--panel); border: 1px solid var(--border);
+    border-radius: 4px; padding: 2px 8px; margin: 2px; font-size: 13px; font-weight: 600;
+  }
+  .empty { color: var(--muted); font-size: 13px; }
+  .log {
+    background: #000; color: #9fef9f; font-family: monospace; font-size: 11px;
+    border-radius: 6px; padding: 8px; height: 120px; overflow-y: auto; white-space: pre-wrap;
+  }
+  .msg { font-size: 12px; color: var(--muted); min-height: 16px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Open P2P 行为克隆游戏智能体</h1>
+  <span class="sub">文本指令 + 推理性能 · 课题六演示</span>
+  <span class="status-dot" id="status-dot"></span>
+  <span class="status-text" id="status-text">服务器未启动</span>
+</header>
+
+<div class="layout">
+  <aside>
+    <div class="card">
+      <h2>① 推理服务器</h2>
+      <div class="row">
+        <label><input type="checkbox" id="opt-input-text"> 指令模式</label>
+      </div>
+      <div class="row">
+        <button id="btn-start">启动服务器</button>
+        <button id="btn-stop" class="danger">停止</button>
+      </div>
+      <div class="msg" id="server-msg"></div>
+    </div>
+
+    <div class="card">
+      <h2>② 选择测试片段</h2>
+      <div class="row">
+        <label>片段</label>
+        <select id="sel-episode"></select>
+      </div>
+      <div class="row">
+        <label>起始帧</label>
+        <input type="number" id="inp-start" value="500" min="0">
+      </div>
+      <div class="row">
+        <label>帧数</label>
+        <input type="number" id="inp-num" value="60" min="1" max="300">
+      </div>
+      <div class="row">
+        <button id="btn-infer" style="flex:1">▶ 开始推理</button>
+      </div>
+      <div class="row">
+        <button id="btn-pause" class="secondary" style="flex:1" disabled>⏸ 暂停</button>
+        <button id="btn-stop-play" class="danger" style="flex:1" disabled>⏹ 停止</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>③ 文本指令（需指令模式）</h2>
+      <div class="row">
+        <input type="text" id="inp-instruction" placeholder="例如：持续向左移动">
+      </div>
+      <button id="btn-send-instr" class="warn" style="width:100%">发送指令</button>
+    </div>
+
+    <div class="card">
+      <h2>④ 服务器日志</h2>
+      <div class="log" id="log-box">（暂无日志）</div>
+      <button id="btn-log" class="secondary" style="width:100%; margin-top:8px">刷新日志</button>
+    </div>
+  </aside>
+
+  <main>
+    <div class="screen">
+      <div class="frame-area">
+        <img id="frame-img" alt="游戏画面">
+        <div id="frame-placeholder">
+          <div class="ph-icon">
+            <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          </div>
+          <span>等待推理</span>
+        </div>
+      </div>
+      <div id="status-bar" class="idle">等待推理</div>
+      <div class="progress" id="progress"></div>
+    </div>
+    <div class="actions-grid">
+      <div class="action-card">
+        <h3 class="gt">人类标注（Ground Truth）</h3>
+        <div id="gt-keys"></div>
+        <div id="gt-mouse" class="empty"></div>
+      </div>
+      <div class="action-card">
+        <h3 class="pred">模型预测（Prediction）</h3>
+        <div id="pred-keys"></div>
+        <div id="pred-mouse" class="empty"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+let frames = [];
+let playTimer = null;
+let playIdx = 0;
+let state = 'idle';  // idle | running | paused | done
+
+function setState(s) {
+  state = s;
+  const bar = document.getElementById('status-bar');
+  const btnPause = document.getElementById('btn-pause');
+  const btnStop = document.getElementById('btn-stop-play');
+  const btnInfer = document.getElementById('btn-infer');
+  bar.className = s;
+  if (s === 'idle') {
+    bar.textContent = '等待推理';
+    btnPause.disabled = true; btnPause.textContent = '⏸ 暂停';
+    btnStop.disabled = true;
+    btnInfer.disabled = false;
+  } else if (s === 'running') {
+    bar.textContent = '推理进行中';
+    btnPause.disabled = false; btnPause.textContent = '⏸ 暂停';
+    btnStop.disabled = false;
+    btnInfer.disabled = true;
+  } else if (s === 'paused') {
+    bar.textContent = '推理已暂停';
+    btnPause.disabled = false; btnPause.textContent = '▶ 继续';
+    btnStop.disabled = false;
+    btnInfer.disabled = true;
+  } else if (s === 'done') {
+    bar.textContent = '推理已结束';
+    btnPause.disabled = true; btnPause.textContent = '⏸ 暂停';
+    btnStop.disabled = false;
+    btnInfer.disabled = false;
+  }
+}
+
+async function refreshStatus() {
+  const r = await fetch('/api/status').then(x => x.json());
+  const dot = document.getElementById('status-dot');
+  const txt = document.getElementById('status-text');
+  if (r.running) {
+    dot.classList.add('on');
+    txt.textContent = r.uds_ready ? '运行中 · UDS 就绪' : '加载中（模型+编译）';
+  } else {
+    dot.classList.remove('on');
+    txt.textContent = '服务器未启动';
+  }
+  return r;
+}
+
+async function loadEpisodes() {
+  const r = await fetch('/api/episodes').then(x => x.json());
+  const sel = document.getElementById('sel-episode');
+  sel.innerHTML = '';
+  r.episodes.forEach(e => {
+    const o = document.createElement('option');
+    o.value = e;
+    // 省略显示：只显示后 8 位，前面加省略号
+    const short = '…' + e.slice(-8);
+    o.textContent = short;
+    o.title = e;  // 悬停显示完整值
+    sel.appendChild(o);
+  });
+}
+
+function renderKeys(el, keys) {
+  el.innerHTML = '';
+  if (keys && keys.length) {
+    keys.forEach(k => {
+      const s = document.createElement('span');
+      s.className = 'kbd'; s.textContent = k;
+      el.appendChild(s);
+    });
+  } else {
+    el.innerHTML = '<span class="empty">（无按键）</span>';
+  }
+}
+
+function showFrame(i) {
+  const f = frames[i];
+  document.getElementById('frame-img').src = f.image;
+  document.getElementById('frame-img').style.display = 'block';
+  document.getElementById('frame-placeholder').style.display = 'none';
+  renderKeys(document.getElementById('pred-keys'), f.pred_keys);
+  renderKeys(document.getElementById('gt-keys'), f.gt_keys);
+  document.getElementById('pred-mouse').textContent = `鼠标位移: dx=${f.pred_mx} dy=${f.pred_my}`;
+  document.getElementById('gt-mouse').textContent = `鼠标位移: dx=${f.gt_mx} dy=${f.gt_my}`;
+  document.getElementById('progress').textContent = `帧 ${i+1} / ${frames.length}`;
+}
+
+function resetFrameArea() {
+  if (playTimer) { clearInterval(playTimer); playTimer = null; }
+  playIdx = 0;
+  document.getElementById('frame-img').src = '';
+  document.getElementById('frame-img').style.display = 'none';
+  document.getElementById('frame-placeholder').style.display = 'flex';
+  document.getElementById('progress').textContent = '';
+  document.getElementById('pred-keys').innerHTML = '';
+  document.getElementById('pred-mouse').innerHTML = '<span class="empty"></span>';
+  document.getElementById('gt-keys').innerHTML = '';
+  document.getElementById('gt-mouse').innerHTML = '<span class="empty"></span>';
+}
+
+async function doInfer() {
+  const episode = document.getElementById('sel-episode').value;
+  const start = document.getElementById('inp-start').value;
+  const num = document.getElementById('inp-num').value;
+  setState('running');
+  document.getElementById('progress').textContent = '推理中...';
+  const r = await fetch('/api/infer', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({episode, start_frame: parseInt(start), num_frames: parseInt(num)})
+  }).then(x => x.json());
+  if (!r.ok) {
+    alert(r.msg);
+    setState('idle');
+    return;
+  }
+  frames = r.frames;
+  if (playTimer) clearInterval(playTimer);
+  playIdx = 0;
+  showFrame(0);
+  setState('running');
+  playTimer = setInterval(() => {
+    if (playIdx >= frames.length - 1) {
+      // 播放到最后一帧，自动结束
+      clearInterval(playTimer); playTimer = null;
+      setState('done');
+      return;
+    }
+    playIdx += 1;
+    showFrame(playIdx);
+  }, 250);
+}
+
+function doPauseResume() {
+  if (state === 'running') {
+    clearInterval(playTimer); playTimer = null;
+    setState('paused');
+  } else if (state === 'paused') {
+    setState('running');
+    playTimer = setInterval(() => {
+      if (playIdx >= frames.length - 1) {
+        clearInterval(playTimer); playTimer = null;
+        setState('done');
+        return;
+      }
+      playIdx += 1;
+      showFrame(playIdx);
+    }, 250);
+  }
+}
+
+function doStopPlay() {
+  clearInterval(playTimer); playTimer = null;
+  frames = [];
+  resetFrameArea();
+  setState('idle');
+}
+
+async function sendInstruction() {
+  const text = document.getElementById('inp-instruction').value;
+  const r = await fetch('/api/instruction', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({text})
+  }).then(x => x.json());
+  alert(r.msg);
+}
+
+async function refreshLog() {
+  const r = await fetch('/api/server/log').then(x => x.json());
+  document.getElementById('log-box').textContent = r.tail.join('') || '（暂无日志）';
+}
+
+document.getElementById('btn-start').addEventListener('click', async () => {
+  const inputText = document.getElementById('opt-input-text').checked;
+  const r = await fetch('/api/server/start', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({input_text: inputText})
+  }).then(x => x.json());
+  document.getElementById('server-msg').textContent = r.msg;
+  refreshStatus();
+});
+
+document.getElementById('btn-stop').addEventListener('click', async () => {
+  await fetch('/api/server/stop', {method: 'POST'});
+  document.getElementById('server-msg').textContent = '已停止';
+  refreshStatus();
+});
+
+document.getElementById('btn-infer').addEventListener('click', doInfer);
+document.getElementById('btn-pause').addEventListener('click', doPauseResume);
+document.getElementById('btn-stop-play').addEventListener('click', doStopPlay);
+document.getElementById('btn-send-instr').addEventListener('click', sendInstruction);
+document.getElementById('btn-log').addEventListener('click', refreshLog);
+
+loadEpisodes();
+refreshStatus();
+setState('idle');
+setInterval(refreshStatus, 5000);
+</script>
+</body>
+</html>
